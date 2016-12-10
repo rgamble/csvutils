@@ -1,0 +1,32 @@
+On UNIX-like systems you can install using make:
+
+make && make install
+
+If you want to disable POSIX RE or pcre support from grep you can use:
+
+make CPPFLAGS='-DWITHOUT_POSIX'
+or
+make CPPFLAGS='-DWITHOUT_PCRE'
+
+or both if you'd like (although it would result in quite a limited csvgrep).
+
+
+On non-UNIX or systems without make, build libcsv (provided as a seperate
+package, see the README) as a shared library or object file, and build 
+version.c and helper.c in the src directory as object files.  Build each
+of the programs in the src directory with the version and helper object
+files and libcsv, see your compiler for details on how to do this, with
+gcc this can be done like so:
+
+gcc -c version.c -o version.o
+gcc -c helper.c -o helper.o
+gcc -c libcsv.c -o libcsv.o
+
+gcc csvcount.c version.o helper.o libcsv.o -o csvcount
+
+or if you are building against the libcsv library dynamically:
+gcc csvcount.c version.o helper.o -lcsv -o csvcount
+
+If you are building csvgrep with pcre support you will need the PCRE library as
+well, see the README for details.
+

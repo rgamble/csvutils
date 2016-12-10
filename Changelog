@@ -1,0 +1,26 @@
+Sat Jun  2 11:27:03 EDT 2007
+version 0.9.0 released
+  * Initial release of csvutils
+  * Thanks to Elizabeth Randall <randalle@121directresponse.com> for her
+  assistence in testing and providing valuable feedback and Philip Hazel for
+  writing the PCRE library.
+
+Sat Jun 16 19:39:41 EDT 2007
+version 0.9.1 released
+  * Fixed a bug where empty fields would be printed without quotes for most 
+  programs
+  * Changed the behavior of csvcut -m, created empty fields will now be quoted
+  * Fixed a bug in csvvalid which caused the location of mal-formed data to be
+  misreported
+  * Added -L & -l options to csvgrep
+  * Added -H & -h options to csvgrep
+  * csvgrep will now print totals for each file specified with the -c option
+  instead of a total for all files combined
+
+Sat Jul 26 12:37:12 EDT 2008
+version 0.9.3 released
+  * Updated to use libcsv version 3
+  * Added option to print/no print CSV header, changed default behavior to
+  print header when used to resolve field names.  Previously, CSV header was
+  treated as a regular record and only printed if it matched the provided
+  pattern.
