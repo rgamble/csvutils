@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <string.h>
 
 #include <getopt.h>
-#include "libcsv/csv.h"
+#include <csv.h>
 #include "version.h"
 #include "helper.h"
 

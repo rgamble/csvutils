@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <libcsv/csv.h>
+#include <csv.h>
 
 #define VERSION "0.9.3"
 

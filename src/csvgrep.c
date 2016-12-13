@@ -41,7 +41,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #  define PCRE_SUPPORT " (compiled without pcre support)"
 #endif
 
-#include "libcsv/csv.h"
+#include <csv.h>
 #include "version.h"
 #include "helper.h"
 
