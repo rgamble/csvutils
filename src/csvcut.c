@@ -18,6 +18,13 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*lint -esym(534, csv_fwrite2, atexit) -emacro(534, putc) */
+/*lint -esym(715, not_a_space, field_spec_cb1, field_spec_cb2, cb1, cb2) */
+/*lint -ecall(732, csv_set_delim, csv_set_quote, csv_fwrite2) */
+/*lint -esym(750, AUTHORS) */
+/*lint -e801 goto used */
+/*lint -esym(818, cb1) */
+
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -74,16 +81,16 @@ char quote = CSV_QUOTE;
 char delimiter = CSV_COMMA;
 
 /* The quote argument */
-char *quote_string;
+const char *quote_string;
 
 /* The delimiter argument */
-char *delimiter_string;
+const char *delimiter_string;
 
 /* strict mode in effect if set */
 int strict;
 
 /* The number of fields waiting for name resolution */
-int unresolved_fields;
+int unresolved_fields = 0;
 
 /* The name this program was called with */
 char *program_name;
@@ -98,13 +105,13 @@ entry *entry_array;
 field_spec *field_spec_array;
 
 /* Size of the field_spec_array */
-size_t field_spec_size;
+size_t field_spec_size = 0;
 
 /* The current size of the entry array */
-size_t entry_array_size;
+size_t entry_array_size = 0;
 
 /* The field specifications passed to the program */
-char *field_spec_arg;
+const char *field_spec_arg;
 
 /* Haven't seen a non-empty record if set */
 int first_record = 1;
@@ -123,7 +130,7 @@ void field_spec_cb2 (int c, void *data);
 void cut_file(char *filename);
 void usage (int status);
 void add_field_spec(char *start, char *stop, size_t start_value, size_t stop_value);
-void process_field_specs(char *f);
+void process_field_specs(const char *f);
 void print_unresolved_fields(void);
 void unresolve_fields(void);
 void cleanup(void);
@@ -219,7 +226,7 @@ not_a_space(unsigned char c)
 }
 
 void
-process_field_specs(char *f)
+process_field_specs(const char *f)
 {
   struct csv_parser p;
   size_t len = strlen(f);
@@ -311,10 +318,10 @@ field_spec_cb1(void *s, size_t len, void *data)
   size_t left_size = 0, right_size = 0;
   long unsigned left_value = 0, right_value = 0;
   char *left = NULL, *right = NULL;
-  char *ptr, *field;
+  char *ptr;
   int left_ended = 0;
 
-  left = ptr = field = Strndup(s, len);
+  left = ptr = Strndup(s, len);
 
   while (*ptr) {
     if (*ptr == '-') {
@@ -381,7 +388,7 @@ field_spec_cb2(int c, void *data)
 }
 
 void
-cb1 (void *s, size_t len, void *data)
+cb1(void *s, size_t len, void *data)
 {
   size_t i = 0;
 

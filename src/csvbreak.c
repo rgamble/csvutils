@@ -19,6 +19,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*lint -esym(534, csv_fwrite2, remove, atexit, csv_init) */
+/*lint -ecall(732, csv_fwrite2, csv_set_delim, csv_set_quote) */
+/*lint -esym(750, AUTHORS) -esym(715, cb1, cb2) */
+
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -72,16 +76,16 @@ file *file_array;
 entry *entry_array;
 
 /* The current size of the file array */
-size_t file_array_size;
+size_t file_array_size = 0;
 
 /* The current size of the entry array */
-size_t entry_array_size;
+size_t entry_array_size = 0;
 
 /* The prefix to use for created files */
-char *filename_prefix = "";
+const char *filename_prefix = "";
 
 /* The suffic to use for created files */
-char *filename_suffix = ".csv";
+const char *filename_suffix = ".csv";
 
 /* The name this program was called with */
 char *program_name;
@@ -102,13 +106,13 @@ char *break_field_name;
 char delimiter = CSV_COMMA;
 
 /* The delimiter argument */
-char *delimiter_name;
+const char *delimiter_name;
 
 /* The quote character */
 char quote = CSV_QUOTE;
 
 /* The quote argument */
-char *quote_name;
+const char *quote_name;
 
 /* Enforce strict CSV? */
 int strict;
@@ -116,14 +120,8 @@ int strict;
 /* The current field number */
 long unsigned current_field;
 
-/* The current record number */
-long unsigned current_record = 1; 
-
 /* True while the current record is the first non-empty record */
 int first_record = 1;
-
-/* The name of the file to print the current record to */
-char *cur_filename;
 
 /* The current output file handle */
 FILE *cur_file;
@@ -132,7 +130,7 @@ FILE *cur_file;
 entry *header;
 
 /* The current size of the header array */
-size_t header_size;
+size_t header_size = 0;
 
 /* Option to print header */
 int write_header;
@@ -146,11 +144,9 @@ int call_remove_files = 1;
 int close_one_file(void);
 void select_file(char *field_value, size_t len);
 void print_record(void);
-void free_files(void);
-void close_files(void);
 void remove_files(void);
 void usage (int status);
-char * make_file_name(char *data);
+char * make_file_name(const char *data);
 void cb1 (void *data, size_t len, void *vp);
 void cb2 (int c, void *vp);
 void make_header(void);
@@ -395,7 +391,7 @@ remove_files(void)
 }
 
 char *
-make_file_name(char *name)
+make_file_name(const char *name)
 {
   char *filename = xmalloc(strlen(name) + strlen(filename_prefix) + strlen(filename_suffix) + 1);
   strcpy(filename, filename_prefix);
@@ -460,7 +456,6 @@ cb2 (int c, void *vp)
   }
 
   current_field = 0;
-  current_record++;
 }
 
 

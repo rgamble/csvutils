@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -ansi
+CFLAGS=-Wall -ansi -pedantic
 DESTDIR=/usr/local/bin
 MANDIR=/usr/share/man/man1
 INCLUDES=-I include

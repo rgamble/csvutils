@@ -19,6 +19,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*lint -esym(534, csv_fini) */
+/*lint -esym(715, cb1, cb2) */
+/*lint -ecall(732, csv_set_delim, csv_set_quote) */
+/*lint -esym(750, AUTHORS) */
+
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -45,13 +50,13 @@ int print_rows;
 long unsigned fields;
 
 /* The number of rows encountered for the current file */
-long unsigned rows;
+long unsigned rows = 0;
 
 /* The number of fields encountered for all files */
-long unsigned total_fields;
+long unsigned total_fields = 0;
 
 /* The number of rows encountered for all files */
-long unsigned total_rows;
+long unsigned total_rows = 0;
 
 /* The quote character */
 char quote = CSV_QUOTE;
@@ -60,13 +65,13 @@ char quote = CSV_QUOTE;
 char delimiter = CSV_COMMA;
 
 /* The quote argument */
-char *quote_string;
+const char *quote_string;
 
 /* The delimiter argument */
-char *delimiter_string;
+const char *delimiter_string;
 
 /* The name this program was called with */
-char *program_name;
+const char * const program_name = PROGRAM_NAME;
 
 
 static struct option const longopts[] =

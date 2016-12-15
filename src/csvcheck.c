@@ -19,6 +19,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*lint -ecall(732, csv_set_delim, csv_set_quote) */
+/*lint -esym(750, AUTHORS, PROGRAM_NAME) */
+/*lint -e801 goto used */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,13 +53,13 @@ char *program_name;
 char delimiter = CSV_COMMA;
 
 /* The delimiter argument */
-char *delimiter_name;
+const char *delimiter_name;
 
 /* The quote character */
 char quote = CSV_QUOTE;
 
 /* The quote argument */
-char *quote_name;
+const char *quote_name;
 
 
 void usage (int status);

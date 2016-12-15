@@ -19,6 +19,12 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*lint -esym(534, csv_fwrite2, remove, csv_init, csv_fini) */
+/*lint -esym(715, cb2) */
+/*lint -ecall(732, csv_set_delim, csv_set_quote, csv_fwrite2) */
+/*lint -esym(750, AUTHORS) */
+/*lint -esym(818, cb1) */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,25 +45,25 @@ char *program_name;
 char delimiter = CSV_COMMA;
 
 /* The delimiter argument */
-char *delimiter_name;
+const char *delimiter_name;
 
 /* The quote character */
 char quote = CSV_QUOTE;
 
 /* The quote argument */
-char *quote_name;
+const char *quote_name;
 
 /* The output delimiter character */
 char output_delimiter = CSV_COMMA;
 
 /* The output delimiter argument */
-char *output_delimiter_name;
+const char *output_delimiter_name;
 
 /* The output quote character */
 char output_quote = CSV_QUOTE;
 
 /* The output quote argument */
-char *output_quote_name;
+const char *output_quote_name;
 
 /* The current_field */
 size_t current_field;

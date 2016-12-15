@@ -18,6 +18,15 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*lint -esym(534, csv_fwrite2, regerror, atexit) ignoring return value */
+/*lint -esym(715, field_spec_cb1, field_spec_cb2, cb1, cb2) */
+/*lint -ecall(732, csv_fwrite2, csv_set_delim, csv_set_quote) */
+/*lint -esym(750, AUTHORS) */
+/*lint -e801 goto used */
+/*lint -esym(818, cb1) */
+/*lint -esym(843, preg) */
+/*lint -esym(844, re) */
+
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -62,7 +71,7 @@ typedef struct field_spec {
   size_t stop_value;
 } field_spec;
 
-enum { NONE, FIXED, EXTENDED, PCRE } match_type;
+enum { NONE, FIXED, EXTENDED, PCRE } match_type = NONE;
 
 static struct option const longopts[] = 
 {
@@ -107,7 +116,7 @@ int print_matching_filenames;
 int print_nonmatching_filenames;
 
 /* The number of fields waiting for name resolution */
-int unresolved_fields;
+int unresolved_fields = 0;
 
 /* Pointer to the array of entries */
 entry *entry_array;
@@ -116,16 +125,13 @@ entry *entry_array;
 field_spec *field_spec_array;
 
 /* Size of the field_spec_array */
-size_t field_spec_size;
+size_t field_spec_size = 0;
 
 /* The current size of the entry array */
-size_t entry_array_size;
+size_t entry_array_size = 0;
 
 /* The name this program was called with */
 char *program_name;
-
-/* Do we need to resolve a field name? */
-int need_name_resolution;
 
 #ifndef WITHOUT_POSIX
 /* regexp compiled regex */
@@ -143,23 +149,20 @@ int print_line_no;
 /* The number of matches in the current file */
 unsigned long cur_matches;
 
-/* The number of matches so far */
-unsigned long matches;
-
 /* The search field argument */
-char *field_spec_arg;
+const char *field_spec_arg;
 
 /* The delimiter character */
 char delimiter = CSV_COMMA;
 
 /* The delimiter argument */
-char *delimiter_name;
+const char *delimiter_name;
 
 /* The quote character */
 char quote = CSV_QUOTE;
 
 /* The quote argument */
-char *quote_name;
+const char *quote_name;
 
 /* Print counts instead of matches if true */
 int print_count;
@@ -202,13 +205,13 @@ int no_print_header;
 
 void print_unresolved_fields(void);
 void unresolve_fields(void);
-void process_field_specs(char *f);
+void process_field_specs(const char *f);
 void add_field_spec(char *start, char *stop, size_t start_value, size_t stop_value);
 void field_spec_cb1(void *s, size_t len, void *data);
 void field_spec_cb2(int c, void *data);
 void print_record(void);
 void usage(int status);
-int matches_pattern (char *pattern, char *data, size_t len);
+int matches_pattern (const char *pat, char *data, size_t len);
 void cb1 (void *data, size_t len, void *vp);
 void cb2 (int c, void *vp);
 void grep_file(char *filename);
@@ -269,7 +272,7 @@ unresolve_fields(void)
 }
 
 void
-process_field_specs(char *f)
+process_field_specs(const char *f)
 {
   struct csv_parser p;
   size_t len = strlen(f);
@@ -305,10 +308,10 @@ field_spec_cb1(void *s, size_t len, void *data)
   size_t left_size = 0, right_size = 0;
   long unsigned left_value = 0, right_value = 0;
   char *left = NULL, *right = NULL;
-  char *ptr, *field;
+  char *ptr;
   int left_ended = 0;
 
-  left = ptr = field = Strndup(s, len);
+  left = ptr = Strndup(s, len);
 
   while (*ptr) {
     if (*ptr == '-') {
@@ -439,6 +442,9 @@ Search for PATTERN in the provided field of CSV FILES or standard input\n\
   -s, --strict                 enforce strict mode, mal-formed CSV files will\n\
                                cause an error\n\
   -n, --record-number          prefix matched records with record numbers\n\
+");
+
+    printf("\
   -F, --fixed-strings          interpret pattern as a fixed literal string\n\
                                instead of a regular expression\n\
       --print-header           print CSV header, this is the default when\n\
@@ -452,7 +458,7 @@ Search for PATTERN in the provided field of CSV FILES or standard input\n\
 }
 
 int
-matches_pattern (char *pattern, char *data, size_t len)
+matches_pattern (const char *pat, char *data, size_t len)
 {
   char *temp;
   int retval;
@@ -461,9 +467,9 @@ matches_pattern (char *pattern, char *data, size_t len)
   if (match_type == FIXED) {
     if (ignore_case) {
       Strupper(temp);  /* uppercase string to match uppercased pattern */
-      retval = !strstr(temp, pattern);
+      retval = !strstr(temp, pat);
     } else {
-      retval = !strstr(temp, pattern);
+      retval = !strstr(temp, pat);
     }
     free(temp);
     return !retval;
@@ -479,7 +485,6 @@ matches_pattern (char *pattern, char *data, size_t len)
     return !retval;
     #endif
   }
-  return 0;
 }
 
 void
@@ -562,7 +567,6 @@ cb2 (int c, void *vp)
   }
 
   if (match != invert_match) {
-    matches++;
     cur_matches++;
     if (print_count || print_matching_filenames || print_nonmatching_filenames)
       ;
@@ -778,7 +782,7 @@ main (int argc, char *argv[])
       /* Upcase string for case insensitive fixed match*/
       char *ptr = pattern;
       while (*ptr)
-        *ptr = toupper(*ptr), ptr++;
+        { *ptr = toupper(*ptr), ptr++; }    /*lint !e734 */
     }
   } else if (match_type == PCRE) {
     #ifdef WITHOUT_PCRE
