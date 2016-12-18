@@ -19,14 +19,14 @@ xrealloc(void *ptr, size_t size)
 }
 
 void
-err (char *msg)
+err (const char *msg)
 {
   fprintf(stderr, "%s\n", msg);
   exit(EXIT_FAILURE);
 }
 
 int
-Is_numeric(char *s)
+Is_numeric(const char *s)
 {
   /* Returns true if string consist entirely of digits */
   while (*s)
@@ -35,7 +35,7 @@ Is_numeric(char *s)
 }
 
 char *
-Strdup(char *s)
+Strdup(const char *s)
 {
   char *tmp = xmalloc(strlen(s) + 1);
   strcpy(tmp, s);
@@ -43,7 +43,7 @@ Strdup(char *s)
 }
 
 char *
-Strndup(char *s, size_t len)
+Strndup(const char *s, size_t len)
 {
   char *tmp = xmalloc(len + 1);
   memcpy(tmp, s, len);
