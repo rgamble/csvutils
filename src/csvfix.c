@@ -39,7 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define AUTHORS "Robert Gamble"
 
 /* The name this program was called with */
-char *program_name;
+const char *program_name;
 
 /* The delimiter character */
 char delimiter = CSV_COMMA;
@@ -119,6 +119,7 @@ cb1 (void *s, size_t i, void *outfile)
 void
 cb2 (int c, void *outfile)
 {
+  (void)c;
   fputc('\n', (FILE *)outfile);
   current_field = 0;
 }
@@ -207,7 +208,7 @@ main (int argc, char *argv[])
       outfile = fopen(argv[optind+1], "wb");
       if (outfile == NULL) {
         fprintf(stderr, "Failed to open file %s: %s\n", argv[optind+1], strerror(errno));
-        fclose(infile);
+        if (infile != stdin) fclose(infile);
         exit(EXIT_FAILURE);
       }
     }
@@ -216,8 +217,8 @@ main (int argc, char *argv[])
   while ((i=fread(buf, 1, 1024, infile)) > 0) {
     if (csv_parse(&p, buf, i, cb1, cb2, outfile) != i) {
       fprintf(stderr, "Error parsing file: %s\n", csv_strerror(csv_error(&p)));
-      fclose(infile);
-      fclose(outfile);
+      if (infile != stdin) fclose(infile);
+      if (outfile != stdout) fclose(outfile);
       if (argc - optind == 2) remove(argv[optind]);
       exit(EXIT_FAILURE);
     }
@@ -228,14 +229,14 @@ main (int argc, char *argv[])
 
   if (ferror(infile)) {
     fprintf(stderr, "Error reading from input file");
-    fclose(infile);
-    fclose(outfile);
+    if (infile != stdin) fclose(infile);
+    if (outfile != stdout) fclose(outfile);
     if (argc - optind == 2) remove(argv[argc - optind]);
     exit(EXIT_FAILURE);
   }
 
-  fclose(infile);
-  fclose(outfile);
+  if (infile != stdin) fclose(infile);
+  if (outfile != stdout) fclose(outfile);
   return EXIT_SUCCESS;
 }
 

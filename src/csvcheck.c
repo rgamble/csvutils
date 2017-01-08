@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 /*lint -ecall(732, csv_set_delim, csv_set_quote) */
 /*lint -esym(750, AUTHORS, PROGRAM_NAME) */
-/*lint -e801 goto used */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +46,7 @@ static struct option const longopts[] =
 
 
 /* The name this program was called with */
-char *program_name;
+const char *program_name;
 
 /* The delimiter character */
 char delimiter = CSV_COMMA;
@@ -98,6 +97,7 @@ check_file(char *filename)
   FILE *fp;
   size_t bytes_read;
   size_t retval;
+  int ok = 1;
 
   if (csv_init(&p, CSV_STRICT|CSV_STRICT_FINI) != 0) {
     fprintf(stderr, "Failed to initialize csv parser\n");
@@ -119,24 +119,26 @@ check_file(char *filename)
 
   while ((bytes_read=fread(buf, 1, 1024, fp)) > 0) {
     if ((retval = csv_parse(&p, buf, bytes_read, NULL, NULL, NULL)) != bytes_read) {
+      ok = 0;
       if (csv_error(&p) == CSV_EPARSE) {
         printf("%s: malformed at byte %lu\n", filename ? filename : "stdin", (unsigned long)pos + retval + 1);
-        goto end;
       } else {
         printf("Error while processing %s: %s\n", filename ? filename : "stdin", csv_strerror(csv_error(&p)));
-        goto end;
       }
+      break;
     }
     pos += 1024;
   }
 
-  if (csv_fini(&p, NULL, NULL, NULL) != 0)
-    printf("%s: missing closing quote at end of input\n", filename ? filename : "stdin");
-  else
-    printf("%s well-formed\n", filename ? filename : "data is");
+  if (ok) {
+    if (csv_fini(&p, NULL, NULL, NULL) != 0)
+      printf("%s: missing closing quote at end of input\n", filename ? filename : "stdin");
+    else
+      printf("%s well-formed\n", filename ? filename : "data is");
+  }
 
-  end:
-  fclose(fp);
+  csv_free(&p);
+  if (fp != stdin) fclose(fp);
 }
 
 int
