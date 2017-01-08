@@ -9,7 +9,7 @@
 #endif
 
 void
-print_version(char *program_name)
+print_version(const char *program_name)
 {
   fprintf(stderr, "\
 %s (csvutils) %s\n\

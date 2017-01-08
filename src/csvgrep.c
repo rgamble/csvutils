@@ -22,7 +22,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 /*lint -esym(715, field_spec_cb1, field_spec_cb2, cb1, cb2) */
 /*lint -ecall(732, csv_fwrite2, csv_set_delim, csv_set_quote) */
 /*lint -esym(750, AUTHORS) */
-/*lint -e801 goto used */
 /*lint -esym(818, cb1) */
 /*lint -esym(843, preg) */
 /*lint -esym(844, re) */
@@ -275,18 +274,30 @@ void
 process_field_specs(const char *f)
 {
   struct csv_parser p;
+  const char *errmsg[] = {
+    "Failed to initialize csv parser",
+    "Invalid field spec",
+    "Field list cannot be empty"
+  };
+  const char *errstr = NULL;
+
   size_t len = strlen(f);
+
   if (csv_init(&p, CSV_STRICT|CSV_STRICT_FINI))
-    err("Failed to initialize csv parser");
+    errstr = errmsg[0];
 
-  if (csv_parse(&p, f, len, field_spec_cb1, field_spec_cb2, NULL) != len)
-    err("Invalid field spec");
+  if ((!errstr) && (csv_parse(&p, f, len, field_spec_cb1, field_spec_cb2, NULL) != len))
+    errstr = errmsg[1];
 
-  if (csv_fini(&p, field_spec_cb1, field_spec_cb2, NULL))
-    err("Invalid field spec");
+  if ((!errstr) && (csv_fini(&p, field_spec_cb1, field_spec_cb2, NULL)))
+    errstr = errmsg[1];
 
-  if (field_spec_size == 0)
-    err("Field list cannot be empty");
+  if ((!errstr) && (field_spec_size == 0))
+    errstr = errmsg[2];
+
+  csv_free(&p);
+
+  if (errstr) err(errstr);
 }
 
 void
@@ -308,15 +319,18 @@ field_spec_cb1(void *s, size_t len, void *data)
   size_t left_size = 0, right_size = 0;
   long unsigned left_value = 0, right_value = 0;
   char *left = NULL, *right = NULL;
-  char *ptr;
+  char *ptr = NULL, *s_copy = NULL;
   int left_ended = 0;
 
-  left = ptr = Strndup(s, len);
+  (void)data;
+
+  ptr = s_copy = Strndup(s, len);
 
   while (*ptr) {
     if (*ptr == '-') {
       if (left_ended || left_size == 0)
         err("Invalid field spec");
+      if (left) free(left);
       left = Strndup(s, left_size);
       if (Is_numeric(left)) {
         left_value = strtoul(left, NULL, 10);
@@ -345,6 +359,7 @@ field_spec_cb1(void *s, size_t len, void *data)
     } else
       unresolved_fields++;
   } else {
+    if (left) free(left);
     left = Strndup(s, left_size);
     if (Is_numeric(left)) {
       left_value = strtoul(left, NULL, 10);
@@ -356,6 +371,7 @@ field_spec_cb1(void *s, size_t len, void *data)
     }
     right_value = left_value;
   }
+
   if (left_value != 0) {
     free(left);
     left = NULL;
@@ -366,11 +382,15 @@ field_spec_cb1(void *s, size_t len, void *data)
   }
 
   add_field_spec(left, right, left_value, right_value);
+
+  free(s_copy);
 }
 
 void
 field_spec_cb2(int c, void *data)
 {
+  (void)data;
+
   /* Field spec should not contain newlines */
   if (c >= 0)
     err("Invalid field spec");
@@ -475,11 +495,11 @@ matches_pattern (const char *pat, char *data, size_t len)
     return !retval;
   } else if (match_type == PCRE) {
     #ifndef WITHOUT_PCRE
+    free(temp);
     return !pcre_exec(re, NULL, data, (int)len, 0, 0, NULL, 0);
     #endif
   } else {
     #ifndef WITHOUT_POSIX
-    temp = Strndup(data, len);
     retval = regexec(&preg, temp, (size_t)0, NULL, 0);
     free(temp);
     return !retval;
@@ -491,6 +511,8 @@ void
 cb1 (void *data, size_t len, void *vp)
 {
   size_t i = 0;
+  (void)vp;
+
   if (unresolved_fields) {
     /* Print CSV header if non-numeric fields provided and --no-print-header
      * not specified */
@@ -538,44 +560,49 @@ cb1 (void *data, size_t len, void *vp)
 void
 cb2 (int c, void *vp) 
 {
+  int done = 0;
   size_t i, j;
+
+  (void)c;
+  (void)vp;
 
   if (first_record && current_field > 0) {
     first_record = 0;
     if (print_header && !unresolved_fields) {
       print_record();
-      goto end;
-    }
-    if (no_print_header && !unresolved_fields) {
-      goto end;
+      done = 1;
+    } else if (no_print_header && !unresolved_fields) {
+      done = 1;
     }
   }
 
-  if (unresolved_fields && !first_record)
+  if (!done && (unresolved_fields && !first_record))
     print_unresolved_fields();
 
-  if (cur_matches && (print_matching_filenames || print_nonmatching_filenames))
-    goto end;
+  if (!done && (cur_matches && (print_matching_filenames || print_nonmatching_filenames)))
+    done = 1;
 
-  for (i = 1; i <= current_field && !match; i++) {
-    for (j = 0; j < field_spec_size && !match; j++) {
-      if (i >= field_spec_array[j].start_value 
-          && i <= field_spec_array[j].stop_value
-          && matches_pattern(pattern, entry_array[i-1].data, entry_array[i-1].size))
-        match = 1;
+  if (!done) {
+    for (i = 1; i <= current_field && !match; i++) {
+      for (j = 0; j < field_spec_size && !match; j++) {
+        if (i >= field_spec_array[j].start_value
+            && i <= field_spec_array[j].stop_value
+            && matches_pattern(pattern, entry_array[i-1].data, entry_array[i-1].size))
+          match = 1;
+      }
+    }
+
+    if (match != invert_match) {
+      cur_matches++;
+      if (print_count || print_matching_filenames || print_nonmatching_filenames)
+        ;
+      else {
+        print_record();
+      }
     }
   }
 
-  if (match != invert_match) {
-    cur_matches++;
-    if (print_count || print_matching_filenames || print_nonmatching_filenames)
-      ;
-    else {
-      print_record();
-    }
-  }
-
-end:
+/* end: */
   match = 0;
   current_field = 0;
   current_record++;
@@ -615,7 +642,7 @@ grep_file(char *filename)
     if (csv_parse(&p, buf, bytes_read, cb1, cb2, NULL) != bytes_read) {
       fprintf(stderr, "Error while parsing file: %s\n", csv_strerror(csv_error(&p)));
       csv_free(&p);
-      fclose(fp);
+      if (fp != stdin) fclose(fp);
       return;
     }
   }
@@ -623,7 +650,7 @@ grep_file(char *filename)
   if (csv_fini(&p, cb1, cb2, NULL) != 0) {
     fprintf(stderr, "Error while parsing file: %s\n", csv_strerror(csv_error(&p)));
     csv_free(&p);
-    fclose(fp);
+    if (fp != stdin) fclose(fp);
     return;
   }
 
@@ -635,7 +662,7 @@ grep_file(char *filename)
     return;
   }
 
-  fclose(fp);
+  if (fp != stdin) fclose(fp);
 
   if (print_matching_filenames && cur_matches) {
     printf("%s\n", filename);
@@ -790,6 +817,7 @@ main (int argc, char *argv[])
     #else
     re = pcre_compile(pattern, 0, &err_ptr, &rv, NULL);
     if (rv) {
+      pcre_free(re);
       fprintf(stderr, "Error parsing pattern expression: %s\n", err_ptr);
       exit(EXIT_FAILURE);
     }
@@ -800,6 +828,7 @@ main (int argc, char *argv[])
     #else
     if ((rv = regcomp(&preg, pattern, REG_EXTENDED | REG_NOSUB )) != 0) {
       regerror(rv, &preg, errbuf, sizeof errbuf);
+      regfree(&preg);
       fprintf(stderr, "Error parsing pattern expression: %s\n", errbuf);
       exit(EXIT_FAILURE);
     }
@@ -821,6 +850,14 @@ main (int argc, char *argv[])
     /* Process from stdin */
     grep_file(NULL);
   }
+
+#ifndef WITHOUT_PCRE
+  pcre_free(re);
+#endif
+
+#ifndef WITHOUT_POSIX
+  regfree(&preg);
+#endif
 
   exit(EXIT_SUCCESS);
 }

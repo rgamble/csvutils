@@ -403,6 +403,8 @@ make_file_name(const char *name)
 void
 cb1 (void *data, size_t len, void *vp)
 {
+  (void)vp;
+
   if (need_name_resolution) {
     if ((strlen(break_field_name) == len) && !strncmp(break_field_name, data, len)) {
       break_field = current_field + 1;
@@ -437,6 +439,9 @@ cb1 (void *data, size_t len, void *vp)
 void
 cb2 (int c, void *vp) 
 {
+  (void)c;
+  (void)vp;
+
   /* No longer first record when first non-empty record seen */
   if (first_record && current_field > 0) {
     if (write_header)
@@ -556,12 +561,16 @@ main (int argc, char *argv[])
   while ((bytes_read=fread(buf, 1, 1024, infile)) > 0) {
     if (csv_parse(&p, buf, bytes_read, cb1, cb2, NULL) != bytes_read) {
       fprintf(stderr, "Error while parsing file: %s\n", csv_strerror(csv_error(&p)));
+      csv_free(&p);
+      if (infile != stdin) fclose(infile);
       exit(EXIT_FAILURE);
     }
   }
 
   if (csv_fini(&p, cb1, cb2, NULL)) {
     fprintf(stderr, "Error while parsing file: %s\n", csv_strerror(csv_error(&p)));
+    csv_free(&p);
+    if (infile != stdin) fclose(infile);
     exit(EXIT_FAILURE);
   }
 
@@ -570,6 +579,7 @@ main (int argc, char *argv[])
   if (just_print_counts)
     print_counts();
 
+  if (infile != stdin) fclose(infile);
   call_remove_files = 0;
   exit(EXIT_SUCCESS);
 }

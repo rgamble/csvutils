@@ -146,6 +146,16 @@ cleanup(void)
   for (i = 0; i < entry_array_size; i++)
     free(entry_array[i].data);
   free(entry_array);
+  /* field_spec_array: */
+  if (field_spec_array) {
+    for (i=0; i<field_spec_size; ++i) {
+      if (field_spec_array[i].start_name)
+        free(field_spec_array[i].start_name);
+      if (field_spec_array[i].stop_name)
+        free(field_spec_array[i].stop_name);
+    }
+    free(field_spec_array);
+  }
 }
 
 void
@@ -221,6 +231,7 @@ Print selected fields of CSV files or CSV data received from standard input\n\
 int
 not_a_space(unsigned char c)
 {
+  (void)c;
   /* Preserve spaces when parsing field specs */
   return 0;
 }
@@ -229,20 +240,32 @@ void
 process_field_specs(const char *f)
 {
   struct csv_parser p;
+  const char *errmsg[] = {
+    "Failed to initialize csv parser",
+    "Invalid field spec",
+    "Field list cannot be empty"
+  };
+  const char *errstr = NULL;
+
   size_t len = strlen(f);
+
   if (csv_init(&p, CSV_STRICT|CSV_STRICT_FINI))
-    err("Failed to initialize csv parser");
+    errstr = errmsg[0];
 
-  csv_set_space_func(&p, not_a_space);
+  if (!errstr) csv_set_space_func(&p, not_a_space);
 
-  if (csv_parse(&p, f, len, field_spec_cb1, field_spec_cb2, NULL) != len)
-    err("Invalid field spec");
+  if ((!errstr) && (csv_parse(&p, f, len, field_spec_cb1, field_spec_cb2, NULL) != len))
+    errstr = errmsg[1];
 
-  if (csv_fini(&p, field_spec_cb1, field_spec_cb2, NULL))
-    err("Invalid field spec");
+  if ((!errstr) && (csv_fini(&p, field_spec_cb1, field_spec_cb2, NULL)))
+    errstr = errmsg[1];
 
-  if (field_spec_size == 0)
-    err("Field list cannot be empty");
+  if ((!errstr) && (field_spec_size == 0))
+    errstr = errmsg[2];
+
+  csv_free(&p);
+
+  if (errstr) err(errstr);
 }
 
 
@@ -318,15 +341,17 @@ field_spec_cb1(void *s, size_t len, void *data)
   size_t left_size = 0, right_size = 0;
   long unsigned left_value = 0, right_value = 0;
   char *left = NULL, *right = NULL;
-  char *ptr;
+  char *ptr = NULL, *s_copy = NULL;
   int left_ended = 0;
+  (void)data;
 
-  left = ptr = Strndup(s, len);
+  ptr = s_copy = Strndup(s, len);
 
   while (*ptr) {
     if (*ptr == '-') {
       if (left_ended || left_size == 0)
         err("Invalid field spec");
+      if (left) free(left);
       left = Strndup(s, left_size);
       if (Is_numeric(left)) {
         left_value = strtoul(left, NULL, 10);
@@ -355,6 +380,7 @@ field_spec_cb1(void *s, size_t len, void *data)
     } else
       unresolved_fields++;
   } else {
+    if (left) free(left);
     left = Strndup(s, left_size);
     if (Is_numeric(left)) {
       left_value = strtoul(left, NULL, 10);
@@ -377,11 +403,14 @@ field_spec_cb1(void *s, size_t len, void *data)
   }
 
   add_field_spec(left, right, left_value, right_value);
+
+  free(s_copy);
 }
 
 void
 field_spec_cb2(int c, void *data)
 {
+  (void)data;
   /* Field spec should not contain newlines */
   if (c >= 0)
     err("Invalid field spec");
@@ -391,6 +420,7 @@ void
 cb1(void *s, size_t len, void *data)
 {
   size_t i = 0;
+  (void)data;
 
   if (unresolved_fields) {
     if (first_record) {
@@ -434,10 +464,13 @@ cb1(void *s, size_t len, void *data)
 }
 
 void
-cb2 (int c, void *data)
+cb2 (int m, void *data)
 {
   size_t i, j; 
   int first_field = 1;
+
+  (void)m;
+  (void)data;
 
   if (first_record && current_field > 0)
     first_record = 0;
